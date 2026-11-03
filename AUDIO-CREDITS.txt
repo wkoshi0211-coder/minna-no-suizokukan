@@ -1,0 +1,19 @@
+Aquarium background music
+
+Music: "Dreams Become Real" by Kevin MacLeod (incompetech.com)
+Source: https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1500027
+Licensed under Creative Commons Attribution 4.0 International:
+https://creativecommons.org/licenses/by/4.0/
+
+Water sound: "Bubbling" by Mike Koenig, SoundBible.com
+Source: https://soundbible.com/1148-Bubbling.html
+Licensed under Creative Commons Attribution 3.0:
+https://creativecommons.org/licenses/by/3.0/
+
+Changes for this app: music loudness adjusted and faded in; water sound
+looped, low-pass filtered and mixed quietly beneath the music; encoded as MP3.
+The combined adaptation is shared under CC BY 4.0. Original components
+remain available under the licenses linked above. No endorsement implied.
+
+The short fish-addition sound is synthesized by this app and is separate
+from the background music.
