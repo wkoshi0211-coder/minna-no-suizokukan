@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no">
+<title>みんなの水族館</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Yu Gothic",sans-serif;background:#eef8fb;color:#234}
+header{text-align:center;padding:18px 10px}h1{margin:0;font-size:28px}
+.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:10px}
+button,.file-label{border:none;border-radius:12px;padding:12px 18px;font-size:16px;background:#1677a8;color:white;cursor:pointer}
+.file-label{display:inline-block}input[type=file]{display:none}
+#status{text-align:center;margin:8px;color:#567}
+#tank{position:relative;width:min(95vw,1000px);aspect-ratio:16/9;margin:auto;overflow:hidden;background:linear-gradient(to bottom,#dff8ff 0%,#a8dfef 55%,#62b7ca 100%);border:5px solid white;border-radius:20px;box-shadow:0 4px 15px rgba(0,0,0,.15)}
+.seaweed{position:absolute;bottom:0;width:35px;height:130px;border-radius:50% 50% 0 0;background:#4c9a70;opacity:.55}.seaweed:nth-child(1){left:8%;height:130px}.seaweed:nth-child(2){left:14%;height:90px}.seaweed:nth-child(3){right:12%;height:120px}.seaweed:nth-child(4){right:18%;height:75px}
+.fish{position:absolute;width:120px;height:90px;object-fit:contain;pointer-events:none;user-select:none;will-change:transform;filter:drop-shadow(0 3px 3px rgba(0,0,0,.15))}
+.bubble{position:absolute;width:9px;height:9px;border:1px solid white;border-radius:50%;background:rgba(255,255,255,.35);animation:bubbleUp 7s linear infinite}
+@keyframes bubbleUp{from{transform:translateY(0);opacity:0}15%{opacity:.7}to{transform:translateY(-500px);opacity:0}}
+#emptyMessage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#557;font-size:18px}
+#emptyMessage .icon{font-size:50px;margin-bottom:10px}
+#processing{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.8);z-index:100}
+.processing-box{background:white;padding:25px 35px;border-radius:15px;text-align:center;box-shadow:0 5px 25px rgba(0,0,0,.2)}
+</style>
+</head>
+<body>
+<header><h1>🐟 みんなの水族館</h1></header>
+<div class="controls">
+<label class="file-label">🐠 魚を追加<input id="fileInput" type="file" accept="image/*"></label>
+<button id="clearButton">水槽を空にする</button>
+</div>
+<div id="status">生徒が色を塗った魚を追加してみよう</div>
+<div id="tank">
+<div class="seaweed"></div><div class="seaweed"></div><div class="seaweed"></div><div class="seaweed"></div>
+<div id="bubbles"></div><div id="fishLayer"></div>
+<div id="emptyMessage"><div><div class="icon">🐠</div>魚の写真を追加すると<br>水槽を泳ぎ始めます</div></div>
+</div>
+<div id="processing"><div class="processing-box"><div style="font-size:40px;">🐟</div><div>魚を切り抜いています…</div></div></div>
+<script>
+const fileInput=document.getElementById("fileInput"),clearButton=document.getElementById("clearButton"),fishLayer=document.getElementById("fishLayer"),tank=document.getElementById("tank"),status=document.getElementById("status"),emptyMessage=document.getElementById("emptyMessage"),processing=document.getElementById("processing"),bubbles=document.getElementById("bubbles");
+let fishes=[];
+for(let i=0;i<12;i++){const b=document.createElement("div");b.className="bubble";b.style.left=(5+Math.random()*90)+"%";b.style.bottom=(5+Math.random()*20)+"%";b.style.animationDelay=(-Math.random()*7)+"s";b.style.animationDuration=(5+Math.random()*4)+"s";bubbles.appendChild(b)}
+function loadImage(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=reader.result};reader.onerror=reject;reader.readAsDataURL(file)})}
+function resizeImage(img,maxSize=900){const scale=Math.min(1,maxSize/Math.max(img.naturalWidth,img.naturalHeight));const canvas=document.createElement("canvas");canvas.width=Math.round(img.naturalWidth*scale);canvas.height=Math.round(img.naturalHeight*scale);canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);return canvas}
+function removeOutside(canvas){
+const ctx=canvas.getContext("2d",{willReadFrequently:true}),width=canvas.width,height=canvas.height,image=ctx.getImageData(0,0,width,height),data=image.data,visited=new Uint8Array(width*height),queue=new Int32Array(width*height);let head=0,tail=0;
+function isOutline(index){return (data[index]+data[index+1]+data[index+2])/3<100}
+function canMove(index){return !isOutline(index)}
+function addStart(x,y){if(x<0||x>=width||y<0||y>=height)return;const pos=y*width+x;if(visited[pos])return;const index=pos*4;if(!canMove(index))return;visited[pos]=1;queue[tail++]=pos}
+for(let x=0;x<width;x++){addStart(x,0);addStart(x,height-1)}for(let y=0;y<height;y++){addStart(0,y);addStart(width-1,y)}
+while(head<tail){const pos=queue[head++],x=pos%width,y=Math.floor(pos/width);if(x>0)addStart(x-1,y);if(x<width-1)addStart(x+1,y);if(y>0)addStart(x,y-1);if(y<height-1)addStart(x,y+1)}
+for(let y=0;y<height;y++)for(let x=0;x<width;x++){const pos=y*width+x;if(visited[pos])data[pos*4+3]=0}
+ctx.putImageData(image,0,0);return canvas.toDataURL("image/png")
+}
+async function addFish(file){
+processing.style.display="flex";status.textContent="魚の輪郭を認識しています…";
+try{const img=await loadImage(file),canvas=resizeImage(img),transparentImage=removeOutside(canvas),fishImage=document.createElement("img");fishImage.className="fish";fishImage.src=transparentImage;fishLayer.appendChild(fishImage);emptyMessage.style.display="none";
+const rect=tank.getBoundingClientRect(),fishWidth=120,fishHeight=90,directions=[{x:1,y:-.577},{x:1,y:.577},{x:-1,y:-.577},{x:-1,y:.577}],direction=directions[Math.floor(Math.random()*directions.length)],speed=.075,length=Math.sqrt(direction.x**2+direction.y**2);
+fishes.push({element:fishImage,x:30+Math.random()*Math.max(30,rect.width-fishWidth-60),y:30+Math.random()*Math.max(30,rect.height-fishHeight-60),vx:direction.x/length*speed,vy:direction.y/length*speed,phase:Math.random()*Math.PI*2,wiggleSpeed:.003+Math.random()*.0015,wiggleAmount:3+Math.random()*3,tiltAmount:3+Math.random()*4});
+status.textContent=fishes.length+"匹の魚が泳いでいます"}catch(error){console.error(error);status.textContent="写真の処理に失敗しました。"}processing.style.display="none"
+}
+fileInput.addEventListener("change",event=>{const file=event.target.files[0];if(!file)return;addFish(file);fileInput.value=""});
+clearButton.addEventListener("click",()=>{fishes.forEach(f=>f.element.remove());fishes=[];emptyMessage.style.display="flex";status.textContent="生徒が色を塗った魚を追加してみよう"});
+let previousTime=performance.now();
+function animate(currentTime){const delta=Math.min(32,currentTime-previousTime);previousTime=currentTime;const rect=tank.getBoundingClientRect(),fishWidth=120,fishHeight=90;
+fishes.forEach(fish=>{fish.x+=fish.vx*delta;fish.y+=fish.vy*delta;fish.phase+=fish.wiggleSpeed*delta;const side=Math.sin(fish.phase)*fish.wiggleAmount,upDown=Math.sin(fish.phase*.7)*2;
+if(fish.x<=0){fish.x=0;fish.vx=Math.abs(fish.vx)}if(fish.x>=rect.width-fishWidth){fish.x=rect.width-fishWidth;fish.vx=-Math.abs(fish.vx)}if(fish.y<=0){fish.y=0;fish.vy=Math.abs(fish.vy)}if(fish.y>=rect.height-fishHeight){fish.y=rect.height-fishHeight;fish.vy=-Math.abs(fish.vy)}
+const direction=fish.vx>=0?1:-1,tilt=Math.sin(fish.phase)*fish.tiltAmount;fish.element.style.transform=`translate(${fish.x+side}px,${fish.y+upDown}px) scaleX(${direction}) rotate(${tilt}deg)`});requestAnimationFrame(animate)}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
